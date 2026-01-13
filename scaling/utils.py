@@ -135,9 +135,9 @@ def fit_linear_model_bootstrapped(
     for i in range(bootstrap_iters):
         _idx = np.random.choice(
             range(1, len(X_data)), 
-            size=int(bootstrap_fraction * len(pareto_df)), 
+            size=int(bootstrap_fraction * len(X_data)), 
             replace=False
-        ) if bootstrap_fraction < 1 else range(1, len(pareto_df))
+        ) if bootstrap_fraction < 1 else range(1, len(X_data))
         alpha_N, intercept_N, r_value_N, _, _ = fit_linear_model(
             X_data[_idx],
             y_data[_idx]
@@ -151,3 +151,29 @@ def fit_linear_model_bootstrapped(
     residuals_N = (np.mean(_residuals), np.std(_residuals))
 
     return alphas, intercept_N, residuals_N
+
+
+def get_pareto_frontier(df: pd.DataFrame, x_name="flops", y_name="Validation Loss") -> pd.DataFrame: 
+    """ Function to compute Pareto over FLOPs.
+    """
+    df_sorted = df.sort_values(by=x_name)
+    pareto_points = []
+    min_loss_so_far = float('inf')
+    for _, row in df_sorted.iterrows():
+        if row[y_name] < min_loss_so_far:
+            pareto_points.append(row)
+            min_loss_so_far = row[y_name]
+
+    return pd.DataFrame(pareto_points)
+
+
+def get_pareto_frontier_by_buckets(
+    df: pd.DataFrame, x_name="flops", y_name="Validation Loss", num_buckets: int=None, buck_interval: int=None
+) -> pd.DataFrame: 
+    raise NotImplementedError("This function is not yet implemented.")
+
+
+def get_convex_hull(
+    **kwargs
+) -> pd.DataFrame:
+    raise NotImplementedError("This function is not yet implemented.")
