@@ -1,4 +1,4 @@
-### Efficient Scaling
+# Efficient Scaling
 
 This aims to be a repository to have quick methodologies to build and fit scaling laws, given data.
 
@@ -13,10 +13,28 @@ For each approach, we expect suitable filtering and subsetting of this data, con
 As a *minimal requirement*, we need a `parameters (N)` column, a `tokens/samples (D)` column, along with the final loss per `(N, D)`.
 
 
-### Download Data
+## Installation
+To install the required packages, you can use pip. It is recommended to create a virtual environment first.
 
+```bash
+python -m venv .venv
+source .venv/bin/activate  # On Windows use `.venv\Scripts\activate`
+```
 
-#### Porian et al. data
+Then, install the required packages:
+```bash
+python -m pip install -e .
+```
+
+## Download Data
+
+Before downloading the data, create a `data/` directory in the root of the repository and navigate into it. 
+```bash
+mkdir data
+cd  data
+```
+
+### Porian et al. data
 To download the data from Porian et al., you can use the following command:
 ```
 wget https://raw.githubusercontent.com/formll/resolving-scaling-law-discrepancies/main/data/experiment_results.pickle.xz -O porian_experiments_results.pickle.xz
@@ -26,12 +44,28 @@ It can be read in python as follows:
 ```python
 import pandas as pd
 porian_df = pd.read_pickle(
-    "/content/porian_experiments_results.pickle.xz",
+    "porian_experiments_results.pickle.xz",
     compression='xz'
 )
 ```
 
-#### Warmstarting Data
+### (Mis)Fitting Scaling Laws Data
+To download the (Mis)Fitting Scaling Laws data, you can use the following command:
+```bash
+wget https://raw.githubusercontent.com/hadasah/scaling_laws/master/data/scaling_results.csv
+```
+
+It can be read in python as follows:
+
+```python
+import pandas as pd
+
+misfitting_df = pd.read_csv(
+    "scaling_results.csv",
+)
+```
+
+### Warmstarting Data
 To download the warmstarting data, you can use the following command:
 ```bash
 wget --no-check-certificate 'https://drive.google.com/uc?export=download&id=1vr5Jq1TpTpnkb5CX5mcu2wWQQzbf-bmd' -O warmstarting_data.parquet
@@ -43,3 +77,5 @@ warmstarting_df = pd.read_parquet(
     "warmstarting_data.parquet",
 )
 ```
+
+
