@@ -162,11 +162,11 @@ def get_pareto_frontier(
     df: pd.DataFrame,
     x_name="flops",
     y_name="Validation Loss",
-    unique_col_list: List[str]=None,
 ) -> pd.DataFrame: 
     """ Function to compute Pareto over FLOPs.
     """
-    df_sorted = df.sort_values(by=x_name)
+    df_sorted = df.copy().sort_values(by=x_name)
+    df_sorted = df_sorted.drop_duplicates(subset=[x_name], keep="first")
     pareto_points = []
     min_loss_so_far = float('inf')
     for _, row in df_sorted.iterrows():
