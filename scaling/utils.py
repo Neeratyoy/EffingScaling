@@ -114,6 +114,11 @@ def fit_linear_model(
     Returns:
         Tuple[List[float], float]: The best-fitting parameters and the corresponding loss value.
     """
+    if isinstance(X_data, pd.Series):
+        X_data = X_data.values
+    if isinstance(y_data, pd.Series):
+        y_data = y_data.values
+
     log_C = np.log(X_data)
     log_y = np.log(y_data)
     slope, intercept, r_value, p_value, std_err = scipy.stats.linregress(log_C, log_y)
@@ -153,7 +158,12 @@ def fit_linear_model_bootstrapped(
     return alphas, intercept_N, residuals_N
 
 
-def get_pareto_frontier(df: pd.DataFrame, x_name="flops", y_name="Validation Loss") -> pd.DataFrame: 
+def get_pareto_frontier(
+    df: pd.DataFrame,
+    x_name="flops",
+    y_name="Validation Loss",
+    unique_col_list: List[str]=None,
+) -> pd.DataFrame: 
     """ Function to compute Pareto over FLOPs.
     """
     df_sorted = df.sort_values(by=x_name)
@@ -165,6 +175,29 @@ def get_pareto_frontier(df: pd.DataFrame, x_name="flops", y_name="Validation Los
             min_loss_so_far = row[y_name]
 
     return pd.DataFrame(pareto_points)
+
+
+def get_final_points_from_curve_set(
+    df: pd.DataFrame,
+    unique_col_list: List[str],
+    x_col: str = "flops",
+    y_col: str = "Validation Loss",
+    get_pareto: bool = False,
+) -> pd.DataFrame:
+    """ Function to extract final points from a set of curves.
+    """
+    __df = pd.DataFrame()
+
+    for i, x in enumerate(df.groupby(unique_col_list)):
+        _df = x[1].sort_values(by=x_col)
+        __df = pd.concat([__df, _df.iloc[-1:]])
+
+    final_point_df = __df
+
+    if get_pareto:
+        final_point_df = get_pareto_frontier(final_point_df, x_col, y_col)
+    
+    return final_point_df
 
 
 def get_pareto_frontier_by_buckets(
