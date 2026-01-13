@@ -165,7 +165,8 @@ def get_pareto_frontier(
 ) -> pd.DataFrame: 
     """ Function to compute Pareto over FLOPs.
     """
-    df_sorted = df.copy().sort_values(by=x_name)
+    # NOTE: strict assumption here that x_name is maximized and y_name is minimized
+    df_sorted = df.copy().sort_values(by=[x_name, y_name], ascending=[True, True])
     df_sorted = df_sorted.drop_duplicates(subset=[x_name], keep="first")
     pareto_points = []
     min_loss_so_far = float('inf')
