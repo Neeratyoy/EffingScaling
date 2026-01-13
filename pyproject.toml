@@ -1,0 +1,25 @@
+[build-system]
+requires = ["setuptools>=77.0.3"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "scaling"
+version = "0.0.1"
+authors = [
+  { name = "Neeratyoy Mallik"},
+  { name = "Johannes Hog"},
+]
+description = "A python module for fitting scaling laws"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "numpy",
+    "torch",
+    "scipy",
+    "pandas",
+    "matplotlib",
+]
+
+[tool.setuptools]
+packages = ["scaling"]
+
