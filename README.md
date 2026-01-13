@@ -37,7 +37,7 @@ cd  data
 ### Porian et al. data
 To download the data from Porian et al., you can use the following command:
 ```
-wget https://raw.githubusercontent.com/formll/resolving-scaling-law-discrepancies/main/data/experiment_results.pickle.xz -O porian_experiments_results.pickle.xz
+wget https://raw.githubusercontent.com/formll/resolving-scaling-law-discrepancies/main/data/experiment_results.pickle.xz -O porian_results.pickle.xz
 ```
 
 It can be read in python as follows:
@@ -52,7 +52,7 @@ porian_df = pd.read_pickle(
 ### (Mis)Fitting Scaling Laws Data
 To download the (Mis)Fitting Scaling Laws data, you can use the following command:
 ```bash
-wget https://raw.githubusercontent.com/hadasah/scaling_laws/master/data/scaling_results.csv
+wget https://raw.githubusercontent.com/hadasah/scaling_laws/master/data/scaling_results.csv -O misfitting_results.csv
 ```
 
 It can be read in python as follows:
@@ -68,7 +68,7 @@ misfitting_df = pd.read_csv(
 ### Warmstarting Data
 To download the warmstarting data, you can use the following command:
 ```bash
-wget --no-check-certificate 'https://drive.google.com/uc?export=download&id=1vr5Jq1TpTpnkb5CX5mcu2wWQQzbf-bmd' -O warmstarting_data.parquet
+wget --no-check-certificate 'https://drive.google.com/uc?export=download&id=1vr5Jq1TpTpnkb5CX5mcu2wWQQzbf-bmd' -O warmstarting_results.parquet
 ```
 It can be read in python as follows:
 ```python
