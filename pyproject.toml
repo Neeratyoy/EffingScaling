@@ -24,3 +24,22 @@ dependencies = [
 [tool.setuptools]
 packages = ["scaling"]
 
+[project.optional-dependencies]
+dev = [
+    "ruff",
+]
+
+[tool.ruff]
+line-length = 120
+
+[tool.ruff.lint]
+select = [
+    "F",    # Pyflakes
+    "E",    # pycodestyle errors
+    "W",    # pycodestyle warnings
+    "I",    # isort
+    "N",    # pep8-naming
+    "PL",   # pylint
+    "UP",   # pyupgrade
+    "C90"   # mccabe
+]
