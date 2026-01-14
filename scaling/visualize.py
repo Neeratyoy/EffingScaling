@@ -72,6 +72,8 @@ def plot_line_fit(
     intercept: float,
     x_extrapolate: List[float]=None,
     y_extrapolate: List[float]=None,
+    xlog: bool=True,
+    ylog: bool=True,
 ) -> None:  
     """ Function to plot line fit on log-log scale.
 
@@ -115,5 +117,7 @@ def plot_line_fit(
         )
     ax.legend(loc="lower right")
 
-    ax.set_xscale("log")
-    ax.set_yscale("log")
+    if xlog:
+        ax.set_xscale("log")
+    if ylog:
+        ax.set_yscale("log")
