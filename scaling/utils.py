@@ -104,6 +104,8 @@ def fit_model_lbfgs(
 def fit_linear_model(
     X_data: np.ndarray | List | pd.Series,
     y_data: np.ndarray | List | pd.Series,
+    xlog: bool=True,
+    ylog: bool=True,
 ) -> List[float | float | float | float | float]:
     """ Fit a linear model to log-transformed data.
 
@@ -119,8 +121,10 @@ def fit_linear_model(
     if isinstance(y_data, pd.Series):
         y_data = y_data.values
 
-    log_C = np.log(X_data)
-    log_y = np.log(y_data)
+    if xlog:
+        log_C = np.log(X_data)
+    if ylog:
+        log_y = np.log(y_data)
     slope, intercept, r_value, p_value, std_err = scipy.stats.linregress(log_C, log_y)
     
     return slope, intercept, r_value, p_value, std_err
