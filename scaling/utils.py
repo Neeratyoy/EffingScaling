@@ -194,7 +194,6 @@ def get_final_points_from_curve_set(
         __df = pd.concat([__df, _df.iloc[-1:]])
 
     final_point_df = __df
-
     if get_pareto:
         final_point_df = get_pareto_frontier(final_point_df, x_col, y_col)
     
