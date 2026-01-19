@@ -1,10 +1,9 @@
-from typing import List, Tuple, Optional
-
-import numpy as np
-import pandas as pd
 from matplotlib import pyplot as plt
+import pandas as pd
+from typing import Dict, List, Tuple, Optional
+import numpy as np
 
-from .utils import get_pareto_frontier
+from .utils import get_pareto_frontier, fit_linear_model
 
 
 def visualize_train_curves(
@@ -90,7 +89,9 @@ def plot_line_fit(
     x_extrapolate: List[float]=None,
     y_extrapolate: List[float]=None,
     style: Optional[dict]=None,
-) -> None:  
+    xlog: bool=True,
+    ylog: bool=True,
+) -> None:
     """ Function to plot line fit on log-log scale.
 
     Args:
@@ -152,5 +153,7 @@ def plot_line_fit(
             )
     ax.legend(loc="lower right")
 
-    ax.set_xscale("log")
-    ax.set_yscale("log")
+    if xlog:
+        ax.set_xscale("log")
+    if ylog:
+        ax.set_yscale("log")
