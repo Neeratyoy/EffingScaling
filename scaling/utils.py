@@ -3,7 +3,7 @@ import numpy as np
 import pandas as pd
 import scipy
 from typing import Callable, Dict, List, Tuple
-
+from scipy.special import logsumexp
 
 def huber_loss(
     func_form: Callable,
@@ -58,7 +58,7 @@ def huber_loss_scipy(
     """
     assert func_form is not None, "func_form must be provided for huber_loss_scipy."
     y_pred = func_form(data, params)
-    residuals = np.array(y_true) - np.array(y_pred)    
+    residuals = np.array(y_true) - np.array(y_pred)
     # scipy.special.huber returns the Huber function value
     # huber(delta, r) computes the Huber loss for residual r
     losses = scipy.special.huber(delta, residuals)
@@ -216,6 +216,48 @@ def get_convex_hull(
     **kwargs
 ) -> pd.DataFrame:
     raise NotImplementedError("This function is not yet implemented.")
+
+def functional_form_chin3_stable(
+        data: list | np.ndarray,
+        params: list[float]
+) -> list[float]:
+    assert len(params) == 5, "Expected 5 parameters for functional form."
+    a, alpha, b, beta, e = params
+    assert data.shape[1] == 2, "Expected data with 2 columns (N, D)."
+    N, D = data[:, 0], data[:, 1]
+    exponents = np.stack([(a - alpha * np.log(N)), (b - beta * np.log(D)), np.full((data.shape[0]), e)], axis=-1)
+    return logsumexp(exponents, axis=-1)
+
+def fit_parametric_form_stable(
+        func_form: Callable,
+        X_data: list | np.ndarray,
+        y_data: list | np.ndarray,
+        initial_grid: list | np.ndarray,
+        delta: float = 1e-3,
+        use_scipy: bool = True
+) -> Tuple[float, float]:
+    """
+    Fit using Huber loss (robust to outliers)
+    """
+    best_params = None
+    best_loss = np.inf
+    _loss = huber_loss_scipy if use_scipy else huber_loss
+
+    _loss = partial(_loss, func_form=func_form, delta=delta)
+
+    for init in initial_grid:
+        result = scipy.optimize.minimize(
+            fun=_loss,
+            x0=init,
+            args=(X_data, np.log(y_data)),
+            method='L-BFGS-B',
+            # options={'disp': True, 'maxiter': 100}
+        )
+        if result.fun < best_loss:
+            best_loss = result.fun
+            best_params = result.x
+
+    return best_params, best_loss
 
 
 def functional_form_chin3(
