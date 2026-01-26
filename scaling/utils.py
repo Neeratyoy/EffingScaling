@@ -124,10 +124,10 @@ def fit_linear_model(
         y_data = y_data.values
 
     if xlog:
-        log_C = np.log(X_data)
+        X_data = np.log(X_data)
     if ylog:
-        log_y = np.log(y_data)
-    slope, intercept, r_value, p_value, std_err = scipy.stats.linregress(log_C, log_y)
+        y_data = np.log(y_data)
+    slope, intercept, r_value, p_value, std_err = scipy.stats.linregress(X_data, y_data)
     
     return slope, intercept, r_value, p_value, std_err
 
