@@ -209,9 +209,9 @@ def plot_isoflops(
         _min_loss[:, 0], _min_loss[:, 1],
         marker='^',  # triangle marker pointing up
         markerfacecolor='none',  # transparent fill
-        markeredgecolor='red',  # red edge
+        markeredgecolor='blue',  # red edge
         markersize=4,
-        color='red',
+        color='blue',
         linestyle='--'
     )
     _flip_warmstarting = np.array([[*v] for k, v in flip_warmstarting.items()])
@@ -219,9 +219,9 @@ def plot_isoflops(
         _flip_warmstarting[:, 0], _flip_warmstarting[:, 1],
         marker='v',  # triangle marker pointing up
         markerfacecolor='none',  # transparent fill
-        markeredgecolor='blue',  # red edge
+        markeredgecolor='red',  # red edge
         markersize=4,
-        color='blue',
+        color='red',
         linestyle=':'
     )
 
