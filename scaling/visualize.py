@@ -107,8 +107,6 @@ def plot_line_fit(
     Returns:
         None.
     """
-    if x_max_plot is None:
-        x_max_plot = - np.inf
     if style is None:
         style = {}
     scatter_style = {
@@ -117,7 +115,7 @@ def plot_line_fit(
     scatter_style.update(style)
     ax.scatter(X, Y, **scatter_style)
     if slope is not None and intercept is not None:
-        _x_plot = np.linspace(X.min(), max(X.max(), x_max_plot), 100)
+        _x_plot = np.linspace(X.min(), X.max(), 100)
         line_style = {
             "color": "red",
             "label": "fitted line"
@@ -128,6 +126,20 @@ def plot_line_fit(
             np.exp(intercept + slope * np.log(_x_plot)),
             **line_style
         )
+
+        if x_max_plot is not None and x_max_plot > X.max():
+            _x_plot_ext = np.linspace(X.max(), x_max_plot, 100)
+            ext_line_style = {
+                "color": "red",
+                "linestyle": "--",
+            }
+            ext_line_style.update(style)
+            ax.plot(
+                _x_plot_ext,
+                np.exp(intercept + slope * np.log(_x_plot_ext)),
+                **ext_line_style
+            )
+
 
         if x_extrapolate is not None:
             x_extrapolate_style = {
@@ -231,7 +243,7 @@ def plot_isoflops(
     cbar = plt.colorbar(sm, ax=ax)
     cbar.ax.invert_yaxis()
     _cbar = f"FLOPs"
-    if disable_y_label:
+    if not disable_y_label:
         cbar.set_label(_cbar, fontsize=15)
     cbar.ax.tick_params(labelsize=15)
     # ax.xlabel(f"Growth factor", fontsize=15)
