@@ -240,7 +240,8 @@ def fit_parametric_form(
     y_data: list | np.ndarray,
     initial_grid: list | np.ndarray,
     delta: float=1e-3,
-    use_scipy: bool=True
+    use_scipy: bool=True,
+    bounds: list[tuple[float, float]] | None = None,
 ) -> Tuple[float, float]:
     """
     Fit using Huber loss (robust to outliers)
@@ -257,6 +258,7 @@ def fit_parametric_form(
                 x0=init,
                 args=(X_data, y_data),
                 method='L-BFGS-B',
+                bounds=bounds,
                 # options={'disp': True, 'maxiter': 100}
             )
         if result.fun < best_loss:
