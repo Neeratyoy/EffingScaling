@@ -9,7 +9,7 @@ from scipy.special import logsumexp
 _MISSING = object()
 
 
-def _check_log_range(x: np.ndarray, tol: float=1e-16) -> bool:
+def _check_log_range(x: np.ndarray, tol: float=1e-200) -> bool:
     """ Check if the input array has values that are positive and not too close to zero for log transformation.
     """
     return np.all(x > tol)
@@ -22,6 +22,7 @@ def huber_loss(
     func_form: Callable=_MISSING,
     delta: float=1e-3,
     ylog: bool=False,
+    tol: float=1e-200,
 ) -> float:
     """ Compute the Huber loss between true and predicted values.
 
@@ -44,7 +45,7 @@ def huber_loss(
         raise TypeError("huber_loss() missing required keyword argument: 'func_form'")
     y_pred = func_form(data, params)
     if ylog:
-        if not _check_log_range(y_true) or not _check_log_range(y_pred):
+        if not _check_log_range(y_true, tol=tol) or not _check_log_range(y_pred, tol=tol):
             raise ValueError(
                 f"ylog=True requires all values > 0. "
                 f"Got y_true min={np.array(y_true).min()}, y_pred min={np.array(y_pred).min()}"
@@ -69,6 +70,7 @@ def huber_loss_scipy(
     func_form: Callable=_MISSING,
     delta: float=1e-3,
     ylog: bool=False,
+    tol: float=1e-200,
 ) -> float:
     """ Compute the Huber loss using SciPy.
 
@@ -91,7 +93,7 @@ def huber_loss_scipy(
         raise TypeError("huber_loss_scipy() missing required keyword argument: 'func_form'")
     y_pred = func_form(data, params)
     if ylog:
-        if not _check_log_range(y_true) or not _check_log_range(y_pred):
+        if not _check_log_range(y_true, tol=tol) or not _check_log_range(y_pred, tol=tol):
             raise ValueError(
                 f"ylog=True requires all values > 0. "
                 f"Got y_true min={np.array(y_true).min()}, y_pred min={np.array(y_pred).min()}"

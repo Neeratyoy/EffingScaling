@@ -1,4 +1,5 @@
 from matplotlib import pyplot as plt
+import matplotlib.ticker as mticker
 import pandas as pd
 from typing import Dict, List, Tuple, Optional
 import numpy as np
@@ -172,9 +173,6 @@ def plot_line_fit(
         ax.set_xscale("log")
     if ylog:
         ax.set_yscale("log")
-
-
-import matplotlib.ticker as mticker
 
 
 def plot_isoflops(
