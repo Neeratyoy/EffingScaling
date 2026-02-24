@@ -116,10 +116,10 @@ def fit_linear_model(
         y_data = y_data.values
 
     if xlog:
-        log_C = np.log(X_data)
+        X_data = np.log(X_data)
     if ylog:
-        log_y = np.log(y_data)
-    slope, intercept, r_value, p_value, std_err = scipy.stats.linregress(log_C, log_y)
+        y_data = np.log(y_data)
+    slope, intercept, r_value, p_value, std_err = scipy.stats.linregress(X_data, y_data)
     
     return slope, intercept, r_value, p_value, std_err
 
@@ -272,7 +272,8 @@ def fit_parametric_form(
     y_data: list | np.ndarray,
     initial_grid: list | np.ndarray,
     delta: float=1e-3,
-    use_scipy: bool=True
+    use_scipy: bool=True,
+    bounds: list[tuple[float, float]] | None = None,
 ) -> Tuple[float, float]:
     """
     Fit using Huber loss (robust to outliers)
@@ -289,6 +290,7 @@ def fit_parametric_form(
                 x0=init,
                 args=(X_data, y_data),
                 method='L-BFGS-B',
+                bounds=bounds,
                 # options={'disp': True, 'maxiter': 100}
             )
         if result.fun < best_loss:
