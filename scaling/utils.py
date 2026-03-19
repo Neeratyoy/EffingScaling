@@ -174,7 +174,7 @@ def get_pareto_frontier(
     df: pd.DataFrame,
     x_name="flops",
     y_name="Validation Loss",
-) -> pd.DataFrame: 
+) -> pd.DataFrame:
     """ Function to compute Pareto over FLOPs.
     """
     # NOTE: strict assumption here that x_name is maximized and y_name is minimized
