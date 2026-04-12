@@ -1,4 +1,5 @@
 from matplotlib import pyplot as plt
+import matplotlib.ticker as mticker
 import pandas as pd
 from typing import Dict, List, Tuple, Optional
 import numpy as np
@@ -174,13 +175,10 @@ def plot_line_fit(
         ax.set_yscale("log")
 
 
-import matplotlib.ticker as mticker
-
-
 def plot_isoflops(
-        ax: plt.Axes,
-        isodata: pd.DataFrame,
-        disable_y_label: bool = False,
+    ax: plt.Axes,
+    isodata: pd.DataFrame,
+    disable_y_label: bool = False,
 ) -> None:
     cmap = plt.cm.Greens  # (np.linspace(0.3, 0.9, len(intervals)))
     norm = plt.Normalize(min(isodata.index), max(isodata.index))
