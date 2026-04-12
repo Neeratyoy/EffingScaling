@@ -3,7 +3,7 @@ import numpy as np
 import pandas as pd
 import scipy
 from typing import Callable, Dict, List, Tuple
-
+from scipy.special import logsumexp
 
 def huber_loss(
     func_form: Callable,
@@ -58,7 +58,7 @@ def huber_loss_scipy(
     """
     assert func_form is not None, "func_form must be provided for huber_loss_scipy."
     y_pred = func_form(data, params)
-    residuals = np.array(y_true) - np.array(y_pred)    
+    residuals = np.array(y_true) - np.array(y_pred)
     # scipy.special.huber returns the Huber function value
     # huber(delta, r) computes the Huber loss for residual r
     losses = scipy.special.huber(delta, residuals)
@@ -66,42 +66,34 @@ def huber_loss_scipy(
     return np.sum(losses)
 
 
-def fit_model_lbfgs(
-    X_data: List | np.ndarray,
-    y_data: List | np.ndarray,
-    initial_grid: List | np.ndarray,
-    delta: float=1e-3,
-    scipy: bool=True
-) -> Tuple[List[float], float]:
-    """ Fit model parameters by minimizing the Huber loss.
+def log_huber_loss_scipy(
+        params: List | Dict,
+        data: List | Dict,
+        y_true: List,
+        delta: float = 1e-3,
+        func_form: Callable = None,
+) -> float:
+    """ Compute the Huber loss using SciPy.
 
     Args:
-        X_data (List | np.ndarray): Input data for predictions.
-        y_data (List | np.ndarray): True target values.
-        initial_grid (List | np.ndarray): Initial parameter guesses for optimization.
+        func_form (Callable): The functional form to generate predictions.
+            Function that takes in data and parameters and returns predicted values.
+        params (List | Dict): Parameters for the functional form.
+        data (List | Dict): Input data for predictions.
+        y_true (List): True target values.
         delta (float, optional): The threshold parameter for Huber loss. Defaults to 1e-3.
-        scipy (bool, optional): Whether to use SciPy's Huber loss implementation. Defaults to True.
 
     Returns:
-        Tuple[List[float], float]: The best-fitting parameters and the corresponding loss value.
+        float: The computed Huber loss.
     """
-    best_params = None
-    best_loss = np.inf
-    _loss = huber_loss_scipy if scipy else huber_loss
-    for init in initial_grid:
-        result = scipy.optimize.minimize(
-                fun=_loss,
-                x0=init,
-                args=(X_data, y_data),
-                method='L-BFGS-B',
-                # options={'disp': True, 'maxiter': 100}
-            )
-        if result.fun < best_loss:
-                best_loss = result.fun
-                best_params = result.x
-    
-    return best_params, best_loss
+    assert func_form is not None, "func_form must be provided for huber_loss_scipy."
+    y_pred = func_form(data, params)
+    residuals = np.log(np.array(y_true)) - np.log(np.array(y_pred))
+    # scipy.special.huber returns the Huber function value
+    # huber(delta, r) computes the Huber loss for residual r
+    losses = scipy.special.huber(delta, residuals)
 
+    return np.sum(losses)
 
 def fit_linear_model(
     X_data: np.ndarray | List | pd.Series,
@@ -183,7 +175,6 @@ def get_pareto_frontier(
 
     return pd.DataFrame(pareto_points)
 
-
 def get_final_points_from_curve_set(
     df: pd.DataFrame,
     unique_col_list: List[str],
@@ -200,7 +191,6 @@ def get_final_points_from_curve_set(
         __df = pd.concat([__df, _df.iloc[-1:]])
 
     final_point_df = __df
-
     if get_pareto:
         final_point_df = get_pareto_frontier(final_point_df, x_col, y_col)
     
@@ -217,6 +207,48 @@ def get_convex_hull(
     **kwargs
 ) -> pd.DataFrame:
     raise NotImplementedError("This function is not yet implemented.")
+
+def functional_form_chin3_stable(
+        data: list | np.ndarray,
+        params: list[float]
+) -> list[float]:
+    assert len(params) == 5, "Expected 5 parameters for functional form."
+    a, alpha, b, beta, e = params
+    assert data.shape[1] == 2, "Expected data with 2 columns (N, D)."
+    N, D = data[:, 0], data[:, 1]
+    exponents = np.stack([(a - alpha * np.log(N)), (b - beta * np.log(D)), np.full((data.shape[0]), e)], axis=-1)
+    return logsumexp(exponents, axis=-1)
+
+def fit_parametric_form_stable(
+        func_form: Callable,
+        X_data: list | np.ndarray,
+        y_data: list | np.ndarray,
+        initial_grid: list | np.ndarray,
+        delta: float = 1e-3,
+        use_scipy: bool = True
+) -> Tuple[float, float]:
+    """
+    Fit using Huber loss (robust to outliers)
+    """
+    best_params = None
+    best_loss = np.inf
+    _loss = huber_loss_scipy if use_scipy else huber_loss
+
+    _loss = partial(_loss, func_form=func_form, delta=delta)
+
+    for init in initial_grid:
+        result = scipy.optimize.minimize(
+            fun=_loss,
+            x0=init,
+            args=(X_data, np.log(y_data)),
+            method='L-BFGS-B',
+            # options={'disp': True, 'maxiter': 100}
+        )
+        if result.fun < best_loss:
+            best_loss = result.fun
+            best_params = result.x
+
+    return best_params, best_loss
 
 
 def functional_form_chin3(
@@ -248,7 +280,7 @@ def fit_parametric_form(
     """
     best_params = None
     best_loss = np.inf
-    _loss = huber_loss_scipy if use_scipy else huber_loss
+    _loss = log_huber_loss_scipy if use_scipy else huber_loss
     
     _loss = partial(_loss, func_form=func_form, delta=delta)
 
