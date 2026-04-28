@@ -181,12 +181,14 @@ def plot_isoflops(
         ax: plt.Axes,
         isodata: pd.DataFrame,
         disable_y_label: bool = False,
-) -> None:
+        return_table: bool = False
+) -> pd.DataFrame | None:
     cmap = plt.cm.Greens  # (np.linspace(0.3, 0.9, len(intervals)))
     norm = plt.Normalize(min(isodata.index), max(isodata.index))
 
     flip_warmstarting = dict()
     min_loss = dict()
+
     for flops in isodata.index:
         x = isodata.columns.astype(float).values
         y = isodata.loc[flops].values
@@ -259,3 +261,10 @@ def plot_isoflops(
     ax.get_xaxis().set_major_formatter(plt.ScalarFormatter())
     ax.set_xlim(0.9, max_x * 1.1)
     ax.xaxis.set_minor_locator(mticker.NullLocator())
+
+    if return_table:
+        return pd.DataFrame({
+            "g_opt": _min_loss[:, 0],
+            "g_upper": _flip_warmstarting[:, 0],
+        },
+        index=isodata.index)
