@@ -1,4 +1,5 @@
 from matplotlib import pyplot as plt
+import matplotlib.ticker as mticker
 import pandas as pd
 from typing import Dict, List, Tuple, Optional
 import numpy as np
@@ -174,9 +175,6 @@ def plot_line_fit(
         ax.set_yscale("log")
 
 
-import matplotlib.ticker as mticker
-
-
 def plot_isoflops(
         ax: plt.Axes,
         isodata: pd.DataFrame,
@@ -188,7 +186,6 @@ def plot_isoflops(
 
     flip_warmstarting = dict()
     min_loss = dict()
-
     for flops in isodata.index:
         x = isodata.columns.astype(float).values
         y = isodata.loc[flops].values
@@ -246,10 +243,12 @@ def plot_isoflops(
     cbar.ax.invert_yaxis()
     _cbar = f"FLOPs"
     if not disable_y_label:
-        cbar.set_label(_cbar, fontsize=15)
-    cbar.ax.tick_params(labelsize=15)
+        cbar.set_label(_cbar)
+    else:
+        cbar.set_label(" ")
+    # cbar.ax.tick_params(labelsize=15)
     # ax.xlabel(f"Growth factor", fontsize=15)
-    ax.tick_params(axis='both', which='major', labelsize=15)
+    ax.tick_params(axis='both', which='major')
     # x_axis log scale
     ax.set_xscale('log')
     # get x axis limits

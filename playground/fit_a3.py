@@ -114,3 +114,5 @@ if __name__ == "__main__":
     G = ((alpha*A) / (beta*B)) ** (1 / (alpha + beta))
 
 
+
+
