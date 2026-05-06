@@ -184,8 +184,8 @@ def plot_isoflops(
     cmap = plt.cm.Greens  # (np.linspace(0.3, 0.9, len(intervals)))
     norm = plt.Normalize(min(isodata.index), max(isodata.index))
 
-    flip_warmstarting = dict()
-    min_loss = dict()
+    flip_warmstarting = []
+    min_loss = []
     for flops in isodata.index:
         x = isodata.columns.astype(float).values
         y = isodata.loc[flops].values
@@ -198,12 +198,15 @@ def plot_isoflops(
         _y = p(np.log(_x))
         # find minimum loss point
         _min_coord = (_x[_y.argmin()], _y.min())
-        min_loss[flops] = _min_coord
+        min_loss.append(_min_coord)
         # find flip point
         flip_index = np.sum(_y <= y[0])
         if flip_index < len(_x):
             _flip_coord = (_x[flip_index], _y[flip_index])
-            flip_warmstarting[flops] = _flip_coord
+            flip_warmstarting.append(_flip_coord)
+        else:
+            _flip_coord = (np.inf, _y[0])
+            flip_warmstarting.append(_flip_coord)
 
         ax.plot(
             _x, _y,
@@ -215,7 +218,15 @@ def plot_isoflops(
         )
 
         # Plot trace of minimum loss
-    _min_loss = np.array([[*v] for k, v in min_loss.items()])
+    _min_loss = np.array(min_loss)
+    _flip_warmstarting = np.array(flip_warmstarting)
+
+    proper_points = _min_loss[:, 0] <= (_flip_warmstarting[:, 0] + 0.0001)
+    _min_loss = _min_loss[proper_points]
+    _flip_warmstarting = _flip_warmstarting[proper_points]
+    _flip_warmstarting = _flip_warmstarting[np.isfinite(_flip_warmstarting[:, 0])]
+
+
     ax.plot(
         _min_loss[:, 0], _min_loss[:, 1],
         marker='^',  # triangle marker pointing up
@@ -225,7 +236,6 @@ def plot_isoflops(
         color='blue',
         linestyle='--'
     )
-    _flip_warmstarting = np.array([[*v] for k, v in flip_warmstarting.items()])
     ax.plot(
         _flip_warmstarting[:, 0], _flip_warmstarting[:, 1],
         marker='v',  # triangle marker pointing up
@@ -244,8 +254,6 @@ def plot_isoflops(
     _cbar = f"FLOPs"
     if not disable_y_label:
         cbar.set_label(_cbar)
-    else:
-        cbar.set_label(" ")
     # cbar.ax.tick_params(labelsize=15)
     # ax.xlabel(f"Growth factor", fontsize=15)
     ax.tick_params(axis='both', which='major')
@@ -266,4 +274,4 @@ def plot_isoflops(
             "g_opt": _min_loss[:, 0],
             "g_upper": _flip_warmstarting[:, 0],
         },
-        index=isodata.index)
+        index=isodata.index[proper_points])
