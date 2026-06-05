@@ -4,6 +4,7 @@ import pandas as pd
 import scipy
 from typing import Callable, Dict, List, Tuple
 from scipy.special import logsumexp
+from scipy.special import expit
 
 
 _MISSING = object()  # sentinel value instead of None for missing functional form argument
@@ -216,6 +217,58 @@ def fit_linear_model_bootstrapped(
     residuals_N = (np.mean(_residuals), np.std(_residuals))
 
     return alphas, intercept_N, residuals_N
+
+
+def functional_form_L0_max(
+    data: list | np.ndarray,
+    params: list[float],
+    return_log_loss: bool = True,
+) -> list[float]:
+    """The parameteric function `L = L0 + a * (C ** b)`, where L0 is the irreducible loss.
+
+    The stable equivalent:
+    Setting, L0 = exp(l0), a = exp(a) to ensure positivity.
+    That is equivalent to: L = exp(l0) + exp(a + b * log(C)).
+    Taking log on both sides gives: log(L) = logsumexp([l0, a + b*log(C)]).
+
+    Therefore, the parameters input are expected to be [l0, a, b], where l0 = log(L0), a = log(a).
+
+    NOTE: pass the raw `data` since the stable formulation handles the log-transform of C.
+
+    Args:
+        data (list | np.ndarray): Input data for predictions.
+            Expected to be a 1D array of C values (e.g., FLOPs).
+        params (list[float]): Parameters for the functional form.
+            Expected order: [l0, a, b], where l0 = log(L0), a = log(a) for the stable formulation.
+        return_log_loss (bool, optional): Whether to return log(L) or L.
+            Defaults to True, which is recommended for numerical stability.
+
+    Returns:
+        list[float]: log(L) if return_log_loss=True, else L.
+
+    """
+    if len(params) != 3:
+        raise ValueError(f"Expected 3 parameters for functional form, got {len(params)}.")
+    if len(data.shape) != 1:
+        raise ValueError(f"Expected data with 1 column (C), got shape {data.shape}.")
+
+    l0, a, b = params
+    C = data
+
+    base = expit(l0)
+
+    log_abs_term = np.log(abs(a)) + b * np.log(C)
+    abs_term = np.exp(log_abs_term)
+
+    if a >= 0:
+        L = base + abs_term
+    else:
+        L = base - abs_term
+
+    if return_log_loss:
+        L = np.log(L)
+
+    return L
 
 
 def functional_form_L0(
