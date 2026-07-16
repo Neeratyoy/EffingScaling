@@ -456,11 +456,7 @@ def fit_parametric_form(
 
         res.append(
             {
-                "A": np.exp(result.x[0]),
-                "alpha" : result.x[1],
-                "B" : np.exp(result.x[2]),
-                "beta" : result.x[3],
-                "e" : np.exp(result.x[4]),
+                **{f"p{i}": v for i, v in enumerate(result.x)},
                 "loss": result.fun,
             }
         )
@@ -469,5 +465,6 @@ def fit_parametric_form(
                 best_params = result.x
 
     df = pd.DataFrame(res).sort_values(by="loss", ascending=True)
-    print(df)
+
     return best_params, best_loss, df
+# end of file
