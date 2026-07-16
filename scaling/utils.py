@@ -465,5 +465,6 @@ def fit_parametric_form(
                 best_params = result.x
 
     df = pd.DataFrame(res).sort_values(by="loss", ascending=True)
-    print(df)
+
     return best_params, best_loss, df
+# end of file
