@@ -219,6 +219,16 @@ def fit_linear_model_bootstrapped(
     return alphas, intercept_N, residuals_N
 
 
+def sigmoid_functional_form(
+    data: list | np.ndarray,
+    params: list[float],
+    return_log_loss: bool = True,
+):
+    a_max, log_x0, k, a_min = params
+
+    return a_min + (a_max - a_min) / (1 + np.exp(-k * (np.log(data) - log_x0)))
+
+
 def functional_form_L0_max(
     data: list | np.ndarray,
     params: list[float],
