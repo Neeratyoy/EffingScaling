@@ -315,6 +315,7 @@ def functional_form_chin3(
         L = np.exp(L)
     return L
 
+
 def fit_parametric_form_parallel(
     func_form: Callable,
     X_data: list | np.ndarray,
