@@ -310,10 +310,125 @@ def functional_form_chin3(
         (b - beta * np.log(D)),
         np.full((data.shape[0]), e)
     ], axis=-1)
-    L = logsumexp(exponents, axis=-1) 
+    L = logsumexp(exponents, axis=-1)
     if not return_log_loss:
         L = np.exp(L)
     return L
+
+
+def functional_form_chin_interaction(
+    data: list | np.ndarray,
+    params: list[float],
+    return_log_loss: bool=True,
+) -> list[float]:
+    """ Chinchilla Approach 3 plus an N*D interaction term with its own single exponent:
+    `L = A/N^alpha + B/D^beta + G/(N*D)^gamma + E`.
+
+    The stable equivalent: A=exp(a), B=exp(b), G=exp(g), E=exp(e), so that
+    log(L) = logsumexp([a - alpha*log(N), b - beta*log(D), g - gamma*(log(N)+log(D)), e]).
+
+    Therefore, the parameters input are expected to be [a, alpha, b, beta, g, gamma, e].
+
+    NOTE: pass the raw `data` since the stable formulation handles the log-transform of N, D.
+
+    Args:
+        data (list | np.ndarray): Input data for predictions.
+            Expected to be a 2D array with columns (N, D).
+        params (list[float]): Parameters for the functional form.
+            Expected order: [a, alpha, b, beta, g, gamma, e].
+        return_log_loss (bool, optional): Whether to return log(L) or L.
+            Defaults to True, which is recommended for numerical stability when fitting.
+
+    Returns:
+        list[float]: Predicted L values based on the functional form.
+            If return_log_loss=True, returns log(L). Otherwise, returns L.
+
+    """
+    if len(params) != 7:
+        raise ValueError(f"Expected 7 parameters for functional form, got {len(params)}.")
+    if len(data.shape) != 2 or data.shape[1] != 2:
+        raise ValueError(f"Expected data with 2 columns (N, D), got shape {data.shape}.")
+
+    a, alpha, b, beta, g, gamma, e = params
+    N, D = data[:, 0], data[:, 1]
+    logN, logD = np.log(N), np.log(D)
+
+    exponents = np.stack([
+        (a - alpha * logN),
+        (b - beta * logD),
+        (g - gamma * (logN + logD)),
+        np.full((data.shape[0]), e)
+    ], axis=-1)
+    L = logsumexp(exponents, axis=-1)
+    if not return_log_loss:
+        L = np.exp(L)
+    return L
+
+
+def functional_form_steplaw_lr(
+    data: list | np.ndarray,
+    params: list[float],
+    return_log_loss: bool=True,
+) -> list[float]:
+    """ Step Law optimal learning rate (Wang et al. 2025, arXiv:2503.04715): `eta = A * N^p * D^q`.
+
+    Unlike `functional_form_L0`/`functional_form_chin3`, this is a single power-law term
+    (no irreducible floor to sum against), so no logsumexp stabilization is needed:
+    log(eta) = a + p*log(N) + q*log(D), where a = log(A).
+
+    Args:
+        data (list | np.ndarray): Input data for predictions.
+            Expected to be a 2D array with columns (N, D).
+        params (list[float]): Parameters for the functional form.
+            Expected order: [a, p, q], where a = log(A).
+        return_log_loss (bool, optional): Whether to return log(eta) or eta.
+            Defaults to True, which is recommended for numerical stability when fitting.
+
+    Returns:
+        list[float]: Predicted optimal learning rate (or its log).
+    """
+    if len(params) != 3:
+        raise ValueError(f"Expected 3 parameters for functional form, got {len(params)}.")
+    if len(data.shape) != 2 or data.shape[1] != 2:
+        raise ValueError(f"Expected data with 2 columns (N, D), got shape {data.shape}.")
+
+    a, p, q = params
+    N, D = data[:, 0], data[:, 1]
+
+    log_eta = a + p * np.log(N) + q * np.log(D)
+    return log_eta if return_log_loss else np.exp(log_eta)
+
+
+def functional_form_steplaw_bsz(
+    data: list | np.ndarray,
+    params: list[float],
+    return_log_loss: bool=True,
+) -> list[float]:
+    """ Step Law optimal batch size (Wang et al. 2025, arXiv:2503.04715): `B = A * D^r`.
+
+    log(B) = a + r*log(D), where a = log(A). Single power-law term, no logsumexp needed.
+
+    Args:
+        data (list | np.ndarray): Input data for predictions.
+            Expected to be a 1D array of D values (dataset size in tokens).
+        params (list[float]): Parameters for the functional form.
+            Expected order: [a, r], where a = log(A).
+        return_log_loss (bool, optional): Whether to return log(B) or B.
+            Defaults to True, which is recommended for numerical stability when fitting.
+
+    Returns:
+        list[float]: Predicted optimal batch size (or its log).
+    """
+    if len(params) != 2:
+        raise ValueError(f"Expected 2 parameters for functional form, got {len(params)}.")
+    if len(data.shape) != 1:
+        raise ValueError(f"Expected data with 1 column (D), got shape {data.shape}.")
+
+    a, r = params
+    D = data
+
+    log_bsz = a + r * np.log(D)
+    return log_bsz if return_log_loss else np.exp(log_bsz)
 
 
 def fit_parametric_form_parallel(
