@@ -365,6 +365,55 @@ def functional_form_chin_interaction(
     return L
 
 
+def functional_form_width_depth(
+    data: list | np.ndarray,
+    params: list[float],
+    return_log_loss: bool=True,
+) -> list[float]:
+    """ Chinchilla Approach 3 with a third independent additive term for D:
+    `L = A/width^alpha + B/depth^beta + F/D^gamma + E`.
+
+    The stable equivalent: A=exp(a), B=exp(b), F=exp(f), E=exp(e), so that
+    log(L) = logsumexp([a - alpha*log(width), b - beta*log(depth), f - gamma*log(D), e]).
+
+    Therefore, the parameters input are expected to be [a, alpha, b, beta, f, gamma, e].
+
+    NOTE: pass the raw `data` since the stable formulation handles the log-transform of
+    width, depth, D.
+
+    Args:
+        data (list | np.ndarray): Input data for predictions.
+            Expected to be a 2D array with columns (width, depth, D).
+        params (list[float]): Parameters for the functional form.
+            Expected order: [a, alpha, b, beta, f, gamma, e].
+        return_log_loss (bool, optional): Whether to return log(L) or L.
+            Defaults to True, which is recommended for numerical stability when fitting.
+
+    Returns:
+        list[float]: Predicted L values based on the functional form.
+            If return_log_loss=True, returns log(L). Otherwise, returns L.
+
+    """
+    if len(params) != 7:
+        raise ValueError(f"Expected 7 parameters for functional form, got {len(params)}.")
+    if len(data.shape) != 2 or data.shape[1] != 3:
+        raise ValueError(f"Expected data with 3 columns (width, depth, D), got shape {data.shape}.")
+
+    a, alpha, b, beta, f, gamma, e = params
+    width, depth, D = data[:, 0], data[:, 1], data[:, 2]
+
+    exponents = np.stack([
+        (a - alpha * np.log(width)),
+        (b - beta * np.log(depth)),
+        (f - gamma * np.log(D)),
+        np.full((data.shape[0]), e)
+    ], axis=-1)
+    L = logsumexp(exponents, axis=-1)
+    if not return_log_loss:
+        L = np.exp(L)
+    return L
+
+
 def functional_form_steplaw_lr(
     data: list | np.ndarray,
     params: list[float],
