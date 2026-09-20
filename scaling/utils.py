@@ -480,6 +480,57 @@ def functional_form_steplaw_bsz(
     return log_bsz if return_log_loss else np.exp(log_bsz)
 
 
+# Reference scales (N, D, lr, gbsz) that centre the log inputs of `functional_form_poly2`.
+# Raw logs (log N ~ 20, log D ~ 23) give squared terms in the hundreds, which conditions the
+# 15-coefficient problem badly enough that L-BFGS-B stalls; centred logs stay within a few
+# units and a single init converges.
+POLY2_REF_SCALES = np.array([1e8, 1e10, 1e-3, 256.0])
+
+
+def functional_form_poly2(
+    data: list | np.ndarray,
+    params: list[float],
+    return_log_loss: bool=True,
+) -> list[float]:
+    """ Quadratic log-polynomial loss: `L = exp(poly_2(log N, log D, log lr, log gbsz))`.
+
+    Each log input is centred by `POLY2_REF_SCALES` first: n = log(N/1e8), d = log(D/1e10),
+    l = log(lr/1e-3), b = log(gbsz/256). Then
+    log(L) = c0 + c1*n + c2*d + c3*l + c4*b
+             + c5*n^2 + c6*n*d + c7*n*l + c8*n*b + c9*d^2 + c10*d*l + c11*d*b
+             + c12*l^2 + c13*l*b + c14*b^2,
+    i.e. the constant, the linear terms, then the upper triangle of the outer product in
+    row-major order. log(L) is linear in the coefficients, so no logsumexp is needed.
+
+    Args:
+        data (list | np.ndarray): Input data for predictions.
+            Expected to be a 2D array with columns (N, D, lr, gbsz).
+        params (list[float]): Parameters for the functional form.
+            Expected order: [c0, ..., c14] as above.
+        return_log_loss (bool, optional): Whether to return log(L) or L.
+            Defaults to True, which is recommended for numerical stability when fitting.
+
+    Returns:
+        list[float]: Predicted L values based on the functional form.
+            If return_log_loss=True, returns log(L). Otherwise, returns L.
+    """
+    if len(params) != 15:
+        raise ValueError(f"Expected 15 parameters for functional form, got {len(params)}.")
+    if len(data.shape) != 2 or data.shape[1] != 4:
+        raise ValueError(f"Expected data with 4 columns (N, D, lr, gbsz), got shape {data.shape}.")
+
+    x = np.log(data / POLY2_REF_SCALES)
+    rows, cols = np.triu_indices(4)
+    features = np.column_stack([
+        np.ones(data.shape[0]),
+        x,
+        x[:, rows] * x[:, cols],
+    ])
+
+    log_L = features @ np.asarray(params)
+    return log_L if return_log_loss else np.exp(log_L)
+
+
 def fit_parametric_form_parallel(
     func_form: Callable,
     X_data: list | np.ndarray,
