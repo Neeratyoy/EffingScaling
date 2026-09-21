@@ -365,6 +365,56 @@ def functional_form_chin_interaction(
     return L
 
 
+def functional_form_skaling(
+    data: list | np.ndarray,
+    params: list[float],
+    return_log_loss: bool=True,
+) -> list[float]:
+    """ Chinchilla Approach 3 with the two power terms raised to a shared exponent:
+    `L = E + (A/N^alpha + B/D^beta)^k`. With k = 1 it reduces to `functional_form_chin3`.
+
+    The stable equivalent: A=exp(a), B=exp(b), E=exp(e), so that
+    log(L) = logsumexp([e, k * logsumexp([a - alpha*log(N), b - beta*log(D)])]).
+
+    Therefore, the parameters input are expected to be [a, alpha, b, beta, k, e].
+
+    NOTE: pass the raw `data` since the stable formulation handles the log-transform of N, D.
+
+    Args:
+        data (list | np.ndarray): Input data for predictions.
+            Expected to be a 2D array with columns (N, D).
+        params (list[float]): Parameters for the functional form.
+            Expected order: [a, alpha, b, beta, k, e].
+        return_log_loss (bool, optional): Whether to return log(L) or L.
+            Defaults to True, which is recommended for numerical stability when fitting.
+
+    Returns:
+        list[float]: Predicted L values based on the functional form.
+            If return_log_loss=True, returns log(L). Otherwise, returns L.
+
+    """
+    if len(params) != 6:
+        raise ValueError(f"Expected 6 parameters for functional form, got {len(params)}.")
+    if len(data.shape) != 2 or data.shape[1] != 2:
+        raise ValueError(f"Expected data with 2 columns (N, D), got shape {data.shape}.")
+
+    a, alpha, b, beta, k, e = params
+    N, D = data[:, 0], data[:, 1]
+
+    log_inner = logsumexp(np.stack([
+        (a - alpha * np.log(N)),
+        (b - beta * np.log(D)),
+    ], axis=-1), axis=-1)
+    exponents = np.stack([
+        k * log_inner,
+        np.full((data.shape[0]), e)
+    ], axis=-1)
+    L = logsumexp(exponents, axis=-1)
+    if not return_log_loss:
+        L = np.exp(L)
+    return L
+
+
 def functional_form_width_depth(
     data: list | np.ndarray,
     params: list[float],
