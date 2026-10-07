@@ -1,0 +1,130 @@
+% Subsection: which functional form describes the compute -> ROC AUC frontier, and is its ceiling identified?
+% All numbers come from EffingScaling/playground/sigmoid_fit.py (round 5, after the 2026-10-06 fixes) run on
+% data/nanotabpfn_data_preprocessed.csv as regenerated on 2026-10-06 (59,360 rows):
+%   python sigmoid_fit.py --round 5 --frontier all --bootstrap 100           -> figures/.../functional_forms/round_5_all/
+%   python sigmoid_fit.py --round 5 --frontier all --topk 5 --bootstrap 100  -> round_5_all_top5/
+%   python sigmoid_fit.py --round 5 --frontier all --seed-weights            -> round_5_all_seedw/
+%   python sigmoid_fit.py --round 5 --frontier big_prior --no-loro           -> round_5/
+% Horizon-split ladder errors and the ceiling-drift table were computed from the same fits (see appendix).
+% Details are in functional_forms_appendix.tex. Requires amsmath and booktabs.
+% Assumed bibtex keys (arXiv ids): hoffmann2022chinchilla (2203.15556), alabdulmohsin2022revisiting (2209.06640),
+% caballero2023bnsl (2210.14891), rosenfeld2020constructive (1909.12673), arora2025bayesian (2410.16531),
+% viering2022shape (2103.10948), owen2024predictable (2401.04757), ruan2024observational (2405.10938),
+% gadre2024overtraining (2403.08540), brandfonbrener2024losstoloss (2411.12925).
+
+\subsection{Which functional form describes the ROC AUC frontier?}
+\label{sec:functional-forms}
+
+Real-data ROC AUC is bounded, and our compute frontier for it is far from linear in $\log C$: it rises from 0.61 at
+$1.8\times10^{11}$ FLOPs to 0.87 at $3\times10^{16}$ FLOPs and visibly flattens. Scaling laws for such metrics usually add
+an irreducible term, a sigmoid, or a link from a loss law. We compare 31 such forms on how well they extrapolate, and ask
+whether the data determine the ceiling, the ROC AUC that the forms predict for unlimited compute.
+
+\paragraph{Frontier.}
+At each of 22 compute levels, from $10^{11.25}$ to $10^{16.5}$ FLOPs in quarter decades, we take the best of up to
+6{,}000 runs, and keep a level only if it improves on all smaller ones. The 22 points come from 18 runs, with at most four
+checkpoints per run. An earlier version of this analysis used only runs with the largest prior (16 features and 400
+rows). That restriction removes the whole $10^{13}$-FLOP stage, whose largest prior has 8 features. Below $10^{13.5}$
+FLOPs the restricted frontier therefore trails the full one by up to 0.20 ROC AUC, and above $10^{14}$ FLOPs the two
+agree to within 0.006. Its low-compute plateau is a consequence of which runs it admits, not of how performance scales.
+On it, no form extrapolates (Appendix~\ref{app:functional-forms}).
+
+\paragraph{Forms.}
+Apart from two references without one, every form has a ceiling. We fit power laws with an irreducible term on the gap $1-\text{AUC}$
+\citep{hoffmann2022chinchilla} and on $\operatorname{logit}(\text{AUC})$, a logistic in $\log C$, M4
+\citep{alabdulmohsin2022revisiting}, a bounded power law \citep{arora2025bayesian,viering2022shape}, the envelope of
+\citet{rosenfeld2020constructive}, which bounds the gap by its chance level, and a Weibull approach to the ceiling. We
+also fit BNSL with one and two breaks \citep{caballero2023bnsl}, four reduced two-break variants, and power laws with
+transient steps. Two-stage forms first fit a power law with an irreducible term to a loss, and then map that loss to ROC
+AUC with a logistic \citep{owen2024predictable,ruan2024observational} or exponential \citep{gadre2024overtraining} link.
+The loss is the synthetic validation loss, the real-data NLL, or the real-data NLL predicted from the synthetic loss by
+a loss-to-loss law \citep{brandfonbrener2024losstoloss}. Table~\ref{tab:forms-appendix} lists all forms.
+
+\paragraph{Evaluation.}
+We rank forms by extrapolation. For every level that leaves at least three points above it, we fit on the points up to
+that level and measure the mean absolute error (MAE) on the points above. We report this error separately for long
+(fit up to $10^{13}$ FLOPs, on 4--8 points), medium and short horizons. A leave-one-run-out test checks interpolation
+without sharing a learning curve between training and test points. For the ceiling we report a profile, the range of
+ceilings whose fit loss stays within 10\% of the optimum, and a 95\% interval from bootstrapping the 6{,}075 runs and
+rebuilding the frontier from each resample. Two details of this protocol matter more than any choice of form. Bounds that
+force the ceiling above the best observed ROC AUC must use only the training points. Holdout refits must not start from
+the parameters fitted on all points. Each mistake leaks test points into the refit, and together they made a nine-parameter
+two-break BNSL look like the best extrapolator in an earlier version of this analysis.
+
+\begin{table}[t]
+  \centering
+  \caption{Extrapolation error and ceiling of selected forms on the compute--ROC AUC frontier (22 points). MAE in ROC
+  AUC, averaged over the cuts of each horizon: long, fit up to $10^{13}$ FLOPs (5 cuts); medium, up to $10^{13.25}$ to
+  $10^{14.5}$ (6 cuts); short, up to $10^{14.75}$ to $10^{15.75}$ (5 cuts). LORO: leave one run out. Ceiling: fit on all
+  points, with its 95\% run-bootstrap interval; $^{\dagger}$the profile does not bound the ceiling. $k$: free
+  parameters. The full table is in the appendix.}
+  \label{tab:forms}
+  \footnotesize
+  \setlength{\tabcolsep}{4pt}
+  \begin{tabular}{lccccccc}
+    \toprule
+    & & \multicolumn{3}{c}{Extrapolation MAE} & & \multicolumn{2}{c}{Ceiling} \\
+    \cmidrule(lr){3-5}\cmidrule(lr){7-8}
+    Form & $k$ & Long & Medium & Short & LORO & Fit & Bootstrap \\
+    \midrule
+    Two-stage via real NLL, logistic link   & 4 & 0.022 & 0.014 & 0.013 & 0.006 & 0.897 & [0.883, 0.901] \\
+    Power law, logit space                  & 3 & 0.024 & 0.009 & 0.009 & 0.005 & 0.896 & [0.885, 0.899] \\
+    Two-stage via synthetic loss, logistic & 4 & 0.026 & 0.012 & 0.013 & 0.006 & 0.909 & [0.883, 0.921] \\
+    M4                                      & 4 & 0.032 & 0.015 & 0.011 & 0.007 & 0.887 & [0.875, 0.891] \\
+    Power law on the gap                    & 3 & 0.033 & 0.012 & 0.005 & 0.006 & 0.889 & [0.881, 0.891] \\
+    Loss-to-loss chain, logistic link       & 4 & 0.035 & 0.014 & 0.013 & 0.006 & 0.897 & [0.883, 0.901] \\
+    Logistic in $\log C$                    & 4 & 0.038 & 0.017 & 0.014 & 0.006 & 0.883$^{\dagger}$ & [0.875, 0.886] \\
+    BNSL, one break                         & 6 & 0.055 & 0.016 & 0.010 & 0.006 & 0.874$^{\dagger}$ & [0.871, 0.877] \\
+    Two-stage via real NLL, exponential     & 3 & 0.071 & 0.023 & 0.006 & 0.018 & 1.000$^{\dagger}$ & [1.000, 1.000] \\
+    BNSL, two breaks                        & 9 & ${>}0.3$ & 0.027 & 0.004 & 0.006 & 0.906 & [0.899, 0.914] \\
+    \midrule
+    M4, ceiling fixed at TabPFN's 0.887     & 3 & 0.015 & 0.006 & 0.002 & 0.005 & -- & -- \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\paragraph{Forms that interpolate equally well differ in how far they extrapolate.}
+Leaving out one run at a time hardly separates the forms: all forms in Table~\ref{tab:forms} except the exponential
+link reach an MAE of 0.005 to 0.007. Extrapolating over three decades or more does separate them. The best form with a
+free ceiling is a power law in logit space with three parameters (0.024). The two-stage form through the real-data NLL
+does about as well (0.022). The power law on the gap, M4 and the logistic in $\log C$ reach 0.03 to 0.04, and BNSL
+with one break 0.055. Fitted on the points up to $3\times10^{13}$ or $10^{14}$ FLOPs, all of these forms err in the
+same direction: they predict less improvement than the frontier later shows. On the frontier built from the five best
+runs per level, the logit power law is again the best free form (0.039), next to the power law on the gap (0.040),
+while the two-stage form falls behind (0.073; Appendix~\ref{app:functional-forms}). Fixing the ceiling at TabPFN's
+0.887 removes about a third of the long-horizon error of the best free form on both frontiers. This shows how much an
+external estimate of the ceiling is worth. It is not a test of the form, because the value was chosen after seeing the
+data.
+
+\paragraph{More breaks fit better and extrapolate worse.}
+BNSL with two breaks has the best in-sample fit ($R^2=0.998$, against 0.991 for the power law on the gap) and the
+smallest short-horizon error. Fitted on the points up to $10^{13}$ FLOPs, however, it diverges. Its four reduced variants and
+the step forms do no better, with long-horizon errors from 0.05 to well above 0.3. A second break is supported only once both transitions lie inside the fitting range, which
+our frontier does not provide early on.
+
+\paragraph{Predicting through a loss does not make extrapolation more reliable.}
+On the frontier over all runs, the two-stage forms with a logistic link reach long-horizon errors of 0.022 to 0.035,
+comparable to the direct forms. On the top-5 frontier they reach 0.073 to 0.127, worse than the power laws. The
+loss-to-loss chain, which predicts the real NLL from the synthetic validation loss, adds nothing to fitting the real NLL
+directly. In both cases the fitted floor of the real NLL goes to zero, so the ceiling comes from the link alone. The
+exponential link fits poorly ($R^2=0.75$) and sends the ceiling to 1.
+
+\paragraph{The data do not determine the ceiling.}
+On all 22 points, the five forms with the lowest long-horizon error put the ceiling between 0.887 and 0.909, around
+TabPFN's 0.887 on the same tasks. For most forms the bootstrap interval is only 0.01 to 0.02 wide, but the intervals of
+different forms do not all overlap: BNSL with one break gives $[0.871, 0.877]$, the logit power law $[0.885, 0.899]$.
+More importantly, the estimate does not converge as the fitting range grows. Refitted on the points up to each compute
+level, the ceilings of four representative forms stay 0.004 to 0.045 above the best ROC AUC observed so far from
+$10^{13.75}$ FLOPs on, and rise with it, from 0.83--0.86 at $10^{14}$ FLOPs to 0.89--0.90 at $10^{16.5}$ FLOPs
+(Table~\ref{tab:ceiling-drift}). The bootstrap
+measures how much the ceiling varies with the runs, for a fixed fitting range. It does not measure how far the ceiling
+will move once larger budgets are added.
+
+\paragraph{Implications.}
+For bounded downstream metrics of tabular foundation models, we recommend a three-parameter power law with an
+irreducible term in logit space. It extrapolates best among the forms with a free ceiling on both frontiers, while
+sigmoids, multi-break forms and two-stage forms do not. Forms should be ranked by long-horizon extrapolation on a
+frontier built from all runs, with ceiling bounds and starting values taken from the training points only. The fitted
+ceiling should be read as a lower bound that tracks the data, not as an estimate of irreducible performance. Matching
+TabPFN's ROC AUC to three decimals is consistent with our data but not supported by it. These conclusions rest on one
+set of 6{,}075 runs, trained with a constant learning rate, on 22 frontier points and on 21 datasets.

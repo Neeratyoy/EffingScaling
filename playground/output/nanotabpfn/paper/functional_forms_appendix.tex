@@ -1,0 +1,161 @@
+% Appendix material for Section~\ref{sec:functional-forms}. Same sources as functional_forms_subsection.tex.
+
+\section{Functional forms: details}
+\label{app:functional-forms}
+
+\paragraph{Notation.}
+$C$ is training compute in FLOPs, $c=\ln(C/10^{13})$, $g=1-\text{AUC}$ the gap to a perfect ROC AUC, $g_0=0.5$ the gap
+of a random classifier, and $\sigma$ the logistic function. Every form except the two references has an irreducible
+gap $E$, so that its ceiling is $1-E$.
+
+\begin{table}[h]
+  \centering
+  \caption{Functional forms. $k$ counts the parameters fitted in the final stage. Two-stage forms add three parameters
+  for the loss law, and the loss-to-loss chain three more.}
+  \label{tab:forms-appendix}
+  \footnotesize
+  \setlength{\tabcolsep}{4pt}
+  \begin{tabular}{llc}
+    \toprule
+    Form & Definition & $k$ \\
+    \midrule
+    Power law on the gap & $g = E + A\,e^{-\alpha c}$ & 3 \\
+    Power law, logit space & $\operatorname{logit}(\text{AUC}) = \ell_\infty - A\,e^{-\alpha c}$, ceiling $\sigma(\ell_\infty)$ & 3 \\
+    Logistic in $\log C$ & $\text{AUC} = a_{\min} + (a_{\max}-a_{\min})\,\sigma(\kappa(\ln C - x_0))$ & 4 \\
+    Logistic, floor at chance & $g = E + (g_0-E)\,\sigma(a-\alpha c)$ & 3 \\
+    M4 & $(g-E)/(g_0-g)^{\gamma} = B\,C^{-\alpha}$; fitted floor: $g_0$ free & 4, 5 \\
+    Bounded power law (POW4) & $g = E + A\,(1+C/C_0)^{-\alpha}$ & 4 \\
+    Rosenfeld envelope & $g = g_0\,\tilde e/\sqrt{\tilde e^2+\eta^2}$, $\tilde e = \tilde E + A\,e^{-\alpha c}$ & 4 \\
+    Weibull & $g = E + (g_0-E)\exp(-A\,e^{d c})$; fitted floor: $g_0$ free & 3, 4 \\
+    BNSL, $n$ breaks & $g = E + B\,C^{-c_0}\prod_{i=1}^{n}(1+(C/d_i)^{1/f_i})^{-c_i f_i}$ & $3+3n$ \\
+    Power law with $m$ steps & $g = E + \exp(a + b\ln C + \textstyle\sum_{j=1}^{m} \delta_j\,\sigma(-\kappa_j(\ln C - x_j)))$ & $3+3m$ \\
+    Loss law (stage 1) & $L(C) = E_L + A\,e^{-\alpha c}$ & (3) \\
+    Logistic link & $\text{AUC} = a_{\min} + (a_{\max}-a_{\min})\,\sigma(-\kappa(L - L_0))$ & 4 \\
+    Exponential link & $g = E + K\,(1-e^{-\gamma L})$ & 3 \\
+    Loss-to-loss & $L_{\text{real}} = E_{\text{real}} + K\,(L_{\text{syn}}(C)-E_{\text{syn}})^{\kappa}$ & (3) \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+The reduced two-break BNSL variants set $c_0=0$ (flat start), share one sharpness $f$, or fix $f=0.05$ (sharp). The
+anchored forms hold the ceiling at 0.887, the ROC AUC of TabPFN on the same 21 tasks. The two references without a
+ceiling are a line in $\log C$ and a bare power law on the gap.
+
+\paragraph{Fitting.}
+Gap forms are fitted on $\log g$, the logit power law on $\operatorname{logit}(\text{AUC})$, and all other forms on
+ROC AUC. We minimise a Huber loss with $\delta=10^{-3}$ with L-BFGS-B, starting from a grid of initial values (at most
+500 for full fits and 100 for holdout refits). Writing compute as $c=\ln(C/10^{13})$ instead of $\ln C$ matters: with
+$\ln C\approx30$, amplitude and exponent are nearly collinear, and the optimiser leaves the amplitude at its initial
+value. Ceilings must lie at or above the best ROC AUC in the fitted points, and fitted floors 0.05 below it. Two-stage
+forms refit every stage on the same points as the final stage.
+
+\paragraph{Two leaks in the evaluation.}
+Both leaks are easy to introduce and both favour the wrong forms. First, the ceiling bound must use the best ROC AUC
+of the training points, not of the whole frontier. With the frontier's best point (0.872) as the bound, 13 of the 25
+forms with a free ceiling put their ceiling exactly on it when refitted on the points up to $3.2\times10^{13}$ FLOPs,
+whose best value is 0.806. The bound then does the extrapolation. With the correct bound, the holdout error of the
+logistic in $\log C$ rises from 0.005 to 0.010, and that of BNSL with one break from 0.005 to 0.012. Second, holdout
+refits must not start from the parameters fitted on all points. A form with more parameters than training points
+barely moves from such a start, so it reproduces the test points. With both leaks in place, BNSL with two breaks reached a
+long-horizon error of 0.003 on the top-5 frontier. Without them, its fits diverge. Rounds of this
+analysis before the fixes reported BNSL with two breaks as the best form, with a ceiling of 0.887.
+
+\begin{table}[h]
+  \centering
+  \caption{All forms on the frontier over all runs (22 points). Columns as in Table~\ref{tab:forms}; $R^2$ is
+  in-sample. Anchored forms are listed last.}
+  \label{tab:forms-full}
+  \scriptsize
+  \setlength{\tabcolsep}{3pt}
+  \begin{tabular}{lcccccccc}
+    \toprule
+    & & \multicolumn{3}{c}{Extrapolation MAE} & & & \multicolumn{2}{c}{Ceiling} \\
+    \cmidrule(lr){3-5}\cmidrule(lr){8-9}
+    Form & $k$ & Long & Medium & Short & LORO & $R^2$ & Fit & Bootstrap \\
+    \midrule
+    Two-stage via real NLL, logistic                 & 4 & 0.022 & 0.014 & 0.013 & 0.006 & 0.993 & 0.897 & [0.883, 0.901] \\
+    Power law, logit space                           & 3 & 0.024 & 0.009 & 0.009 & 0.005 & 0.993 & 0.896 & [0.885, 0.899] \\
+    Two-stage via synthetic loss, logistic           & 4 & 0.026 & 0.012 & 0.013 & 0.006 & 0.993 & 0.909 & [0.883, 0.921] \\
+    M4                                               & 4 & 0.032 & 0.015 & 0.011 & 0.007 & 0.990 & 0.887 & [0.875, 0.891] \\
+    Rosenfeld envelope                               & 4 & 0.032 & 0.024 & 0.015 & 0.009 & 0.970 & 0.885 & [0.872, 0.889] \\
+    Power law on the gap                             & 3 & 0.033 & 0.012 & 0.005 & 0.006 & 0.991 & 0.889 & [0.881, 0.891] \\
+    Loss-to-loss chain, logistic                     & 4 & 0.035 & 0.014 & 0.013 & 0.006 & 0.993 & 0.897 & [0.883, 0.901] \\
+    M4, fitted floor                                 & 5 & 0.038 & 0.013 & 0.011 & 0.007 & 0.990 & 0.888 & [0.876, 0.892] \\
+    Logistic in $\log C$                             & 4 & 0.038 & 0.017 & 0.014 & 0.006 & 0.993 & 0.883$^{\dagger}$ & [0.875, 0.886] \\
+    Logistic in $\log C$, ceiling unbounded          & 4 & 0.041 & 0.017 & 0.013 & 0.006 & 0.993 & 0.883$^{\dagger}$ & [0.867, 0.885] \\
+    Bounded power law (POW4)                         & 4 & 0.043 & 0.015 & 0.011 & 0.006 & 0.991 & 0.889 & [0.877, 0.892] \\
+    Logistic, floor at chance                        & 3 & 0.045 & 0.029 & 0.015 & 0.011 & 0.961 & 0.879$^{\dagger}$ & [0.871, 0.885] \\
+    Power law with one step                          & 6 & 0.049 & 0.023 & 0.005 & 0.005 & 0.998 & 0.905$^{\dagger}$ & [0.904, 1.000] \\
+    Power law on the gap, no ceiling                 & 2 & 0.053 & 0.034 & 0.014 & 0.018 & 0.884 & 1.000$^{\dagger}$ & -- \\
+    BNSL, one break                                  & 6 & 0.055 & 0.016 & 0.010 & 0.006 & 0.995 & 0.874$^{\dagger}$ & [0.871, 0.877] \\
+    Weibull, fitted floor                            & 4 & 0.058 & 0.032 & 0.013 & 0.013 & 0.911 & 0.876$^{\dagger}$ & [0.871, 0.878] \\
+    Power law with two steps                         & 9 & 0.059 & 0.010 & 0.004 & 0.007 & 0.998 & 1.000$^{\dagger}$ & [0.903, 1.000] \\
+    Weibull, floor at chance                         & 3 & 0.066 & 0.032 & 0.013 & 0.015 & 0.886 & 0.875$^{\dagger}$ & [0.871, 0.877] \\
+    Two-stage via real NLL, exponential              & 3 & 0.071 & 0.023 & 0.006 & 0.018 & 0.748 & 1.000$^{\dagger}$ & [1.000, 1.000] \\
+    BNSL, two breaks, flat, sharp                    & 6 & 0.074 & 0.026 & 0.003 & 0.009 & 0.998 & 0.906 & [0.899, 0.916] \\
+    Loss-to-loss chain, exponential                  & 3 & 0.074 & 0.023 & 0.006 & 0.018 & 0.748 & 1.000$^{\dagger}$ & [1.000, 1.000] \\
+    Two-stage via synthetic loss, exponential        & 3 & 0.089 & 0.054 & 0.035 & 0.042 & 0.325 & 1.000$^{\dagger}$ & [1.000, 1.000] \\
+    Linear in $\log C$, no ceiling                   & 2 & 0.156 & 0.094 & 0.036 & 0.026 & 0.803 & -- & -- \\
+    BNSL, two breaks                                 & 9 & ${>}0.3$ & 0.027 & 0.004 & 0.006 & 0.998 & 0.906 & [0.899, 0.914] \\
+    BNSL, two breaks, flat start                     & 8 & ${>}0.3$ & 0.038 & 0.005 & 0.007 & 0.997 & 0.889 & [0.886, 0.907] \\
+    BNSL, two breaks, shared sharpness               & 8 & ${>}0.3$ & 0.033 & 0.003 & 0.006 & 0.998 & 0.903 & [0.899, 0.905] \\
+    BNSL, two breaks, flat, shared sharpness         & 7 & ${>}0.3$ & 0.024 & 0.003 & 0.006 & 0.998 & 0.906 & [0.899, 0.915] \\
+    \midrule
+    M4, ceiling fixed at 0.887                       & 3 & 0.015 & 0.006 & 0.002 & 0.005 & 0.990 & -- & -- \\
+    Logistic, ceiling fixed at 0.887                 & 3 & 0.016 & 0.006 & 0.001 & 0.005 & 0.992 & -- & -- \\
+    BNSL one break, ceiling fixed at 0.887           & 5 & 0.018 & 0.006 & 0.002 & 0.006 & 0.992 & -- & -- \\
+    One step, ceiling fixed at 0.887                 & 5 & 0.032 & 0.011 & 0.005 & 0.005 & 0.992 & -- & -- \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\paragraph{The ceiling follows the data.}
+Table~\ref{tab:ceiling-drift} refits four forms on the points up to each compute level. Below $10^{13.75}$ FLOPs the
+ceilings jump around, because the fits rest on few points. Above it they settle into a pattern: each ceiling stays
+0.004 to 0.045 above the best ROC AUC observed so far and rises with it. None of the four forms predicts at $10^{14}$ FLOPs
+the ceiling it finds at $10^{16.5}$ FLOPs.
+
+\begin{table}[h]
+  \centering
+  \caption{Ceiling fitted on the points up to each compute level, next to the best ROC AUC among those points.}
+  \label{tab:ceiling-drift}
+  \small
+  \begin{tabular}{lccccc}
+    \toprule
+    & & \multicolumn{4}{c}{Fitted ceiling} \\
+    \cmidrule(lr){3-6}
+    Fit up to & Best observed & Power law, gap & Power law, logit & M4 & Two-stage, NLL \\
+    \midrule
+    $10^{13.00}$ & 0.784 & 0.818 & 0.838 & 0.825 & 0.873 \\
+    $10^{13.50}$ & 0.816 & 0.866 & 0.879 & 0.860 & 0.864 \\
+    $10^{14.00}$ & 0.822 & 0.850 & 0.860 & 0.834 & 0.840 \\
+    $10^{14.50}$ & 0.835 & 0.855 & 0.863 & 0.852 & 0.856 \\
+    $10^{15.00}$ & 0.849 & 0.878 & 0.864 & 0.853 & 0.859 \\
+    $10^{15.50}$ & 0.859 & 0.880 & 0.880 & 0.878 & 0.870 \\
+    $10^{16.00}$ & 0.869 & 0.882 & 0.892 & 0.884 & 0.882 \\
+    $10^{16.50}$ & 0.872 & 0.889 & 0.896 & 0.887 & 0.897 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\paragraph{Robustness.}
+We repeat the evaluation on two variants of the frontier. The first replaces the best run at each level by the mean
+of the five best, and drops levels with fewer than 20 runs (21 points, up to $10^{16.25}$ FLOPs). This reduces the
+upward bias of taking a maximum over thousands of noisy runs. The logit power law stays the best form with a free
+ceiling at long horizons (0.039), next to the power law on the gap (0.040). M4, the Rosenfeld envelope, the step form and
+the two-stage form through the real NLL follow at 0.062 to 0.073. The two-stage forms through the synthetic loss and the
+loss-to-loss chain fall to 0.12 and 0.13, and BNSL with two breaks diverges. The logit power law puts the ceiling at
+0.891 $[0.883, 0.900]$ and the power law on the gap at 0.881 $[0.877, 0.891]$. The second variant keeps the frontier but
+weights each point by the inverse of its seed noise. We take the standard deviation of the frontier ROC AUC across four
+seeds of the $10^{13}$-FLOP stage (0.015 to 0.063), and keep its last value beyond $10^{14}$ FLOPs, where no seeds were
+run. The order of the best forms does not change: logit power law 0.025, two-stage through the real NLL 0.026,
+two-stage through the synthetic loss 0.029, power law on the gap 0.032. The logit power law's ceiling stays at 0.896,
+and BNSL with two breaks again fails at long horizons (0.23).
+
+\paragraph{The restricted frontier.}
+The frontier over the runs with the largest prior has 20 points from 11 runs, 8 of them checkpoints of a single run.
+On it, every form fails at long horizons (MAE 0.13 or more) and at medium horizons (0.04 or more). Refitted on the points
+up to $3.2\times10^{13}$ FLOPs, the best form, a two-break BNSL variant, still errs by 0.044, and half of those test
+points come from runs that are also in the training set. Most forms put the ceiling at the best observed point, 0.866,
+and their profiles do not bound it. Only on this frontier do multi-break forms have the lowest holdout error at $3.2\times10^{13}$ FLOPs, which is how
+an earlier version of this analysis came to favour them.
