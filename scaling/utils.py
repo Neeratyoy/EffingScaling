@@ -229,6 +229,33 @@ def sigmoid_functional_form(
     return a_min + (a_max - a_min) / (1 + np.exp(-k * (np.log(data) - log_x0)))
 
 
+def double_sigmoid_functional_form(
+    data: list | np.ndarray,
+    params: list[float],
+    return_log_loss: bool = True,
+) -> np.ndarray:
+    """Two logistic steps in log10(C):
+    `AUC = a_min + h1 * expit(k1 * (log10(C) - x1)) + h2 * expit(k2 * (log10(C) - x2))`.
+
+    A sharp step (`k1` large) and a broad one (`k2` small); the ceiling is `a_min + h1 + h2` and the
+    steepness `k` is per decade. It follows the S-shaped big-prior ROC AUC frontier: a plateau, a sharp
+    rise near 2e13 FLOPs, then a slow rise that levels off. The output is in ROC AUC space, so
+    `return_log_loss` is ignored.
+
+    Args:
+        data (list | np.ndarray): Raw C values (e.g., FLOPs).
+        params (list[float]): [a_min, h1, x1, k1, h2, x2, k2], with x1 and x2 in log10(C).
+        return_log_loss (bool, optional): Unused, kept for a common signature.
+
+    Returns:
+        np.ndarray: Predicted ROC AUC.
+    """
+    a_min, h1, x1, k1, h2, x2, k2 = params
+    log10_c = np.log10(np.atleast_1d(np.asarray(data, dtype=float)))
+
+    return a_min + h1 * expit(k1 * (log10_c - x1)) + h2 * expit(k2 * (log10_c - x2))
+
+
 def functional_form_L0_max(
     data: list | np.ndarray,
     params: list[float],
